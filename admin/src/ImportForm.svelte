@@ -1,5 +1,7 @@
 <script>
   let loading = false;
+  let preview_data = undefined;
+  let view_preview = false;
   let uploadUrl = "http://localhost:3280/api/v1/web/guest/util/upload";
 
   import { formData } from "./store";
@@ -17,29 +19,38 @@
 
   async function importer() {
     // gather data from form
-    let data = await parseForm()
+    let data = await parseForm();
+    preview_data = data;
     // perform import
-    if(data) {
-      loading = true;
-      fetch(url, {
-        method: "POST",
-        body: JSON.stringify(data),
-        headers: {
-          "Content-Type": "application/json"
-        }
-      }).then(
-        async function(res) {
-          let data = await res.json();
-          formData.set(data);
-          loading = false;
-        },
-        function(err) {
-          error = err.message;
-          formData.set({ error: err.message });
-          loading = false;
-        }
-      );
-    } else error = "cannot parse form";
+    if(data && !view_preview) {
+      confirm();
+    }
+    else if (view_preview && preview_data){
+      console.log('show preview');
+    }
+    else error = "cannot parse form";
+  }
+
+  async function confirm(){
+    loading = true;
+    fetch(url, {
+      method: "POST",
+      body: JSON.stringify(preview_data),
+      headers: {
+        "Content-Type": "application/json"
+      }
+    }).then(
+      async function(res) {
+        let data = await res.json();
+        formData.set(data);
+        loading = false;
+      },
+      function(err) {
+        error = err.message;
+        formData.set({ error: err.message });
+        loading = false;
+      }
+    );
   }
 
 
@@ -105,7 +116,21 @@
     {#if loading}
       <div>loading...</div>
     {:else}
+      <input
+        id="view_preview"
+        type="checkbox"
+        bind:checked={view_preview}
+      />
+      <label for="view_preview">
+        View preview before importing data
+      </label>
       <button type="button" class="btn btn-primary" on:click={importer}>
+        {#if view_preview}Preview data{:else}Import{/if}
+      </button>
+    {/if}
+
+    {#if view_preview && preview_data}
+      <button type="button" class="btn btn-primary" on:click={confirm}>
         Import
       </button>
     {/if}
